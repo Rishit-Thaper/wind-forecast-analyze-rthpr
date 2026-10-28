@@ -5,8 +5,7 @@ import Overview from './pages/Overview'
 import DailyDetail from './pages/DailyDetail'
 import StatusMessage from './components/StatusMessage'
 import { OverviewSkeleton, DailyDetailSkeleton } from './components/skeletons'
-
-const DEFAULT_DATE = '2026-01-15'
+import { DEFAULT_DATE } from './constants/analytics'
 
 export const App: React.FC = () => {
   const [page, setPage] = useState<'overview' | 'daily'>('overview')
