@@ -167,7 +167,8 @@ input:focus-visible {
 .nav-tabs {
   display: flex;
   align-items: center;
-  background-color: #f1f5f9;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 3px;
   gap: 2px;
@@ -181,7 +182,8 @@ input:focus-visible {
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
+  background: transparent;
   transition: all 0.15s ease-in-out;
 }
 
@@ -193,7 +195,7 @@ input:focus-visible {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-weight: 600;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Topbar Actions */
@@ -232,7 +234,7 @@ input:focus-visible {
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--radius-full);
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-hover);
   color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -376,7 +378,7 @@ h2 {
 }
 
 .button.primary:hover {
-  background-color: #0f172a;
+  background-color: var(--color-brand-accent-hover);
 }
 
 .button.secondary {
@@ -598,13 +600,13 @@ h2 {
 }
 
 .utc-badge {
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-hover);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
 
 .coverage-badge {
-  background-color: #f8fafc;
+  background-color: var(--color-surface-hover);
   color: var(--color-text-muted);
 }
 
@@ -667,7 +669,7 @@ h2 {
 
 .hour-card {
   padding: 8px 10px;
-  background-color: #f8fafc;
+  background-color: var(--color-surface-hover);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-sm);
 }
@@ -720,7 +722,7 @@ h2 {
 }
 
 .data-table th {
-  background-color: #f8fafc;
+  background-color: var(--color-bg);
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 600;
@@ -734,7 +736,7 @@ h2 {
 }
 
 .data-table tr:hover td {
-  background-color: #f8fafc;
+  background-color: var(--color-surface-hover);
 }
 
 .th-sort-button {
@@ -782,7 +784,7 @@ h2 {
 }
 
 .pill-neutral {
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-hover);
   color: var(--color-text-secondary);
 }
 
