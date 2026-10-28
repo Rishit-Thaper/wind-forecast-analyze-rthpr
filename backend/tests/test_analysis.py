@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from app.analysis import build_comparisons, calculate_metrics, parse_timestamp
 from app.config import Settings
 
-
 UTC = timezone.utc
 SETTINGS = Settings(cutoff_hour_utc=12)
 START = datetime(2026, 1, 1, tzinfo=UTC)

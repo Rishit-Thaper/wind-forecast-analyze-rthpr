@@ -1,5 +1,7 @@
 import type { DailyResponse, OverviewResponse } from './analytics'
 
+export type AppPage = 'overview' | 'daily'
+
 export type SortField =
   | 'start_time'
   | 'forecast_mw'

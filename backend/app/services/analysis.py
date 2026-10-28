@@ -7,7 +7,6 @@ from math import sqrt
 from typing import Any, Iterable
 
 from app.core.config import FEBRUARY_START, JANUARY_START, Settings
-from app.core.errors import ElexonError
 from app.services.elexon import ElexonClient
 
 UTC = timezone.utc

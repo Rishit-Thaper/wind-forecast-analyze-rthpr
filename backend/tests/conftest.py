@@ -2,10 +2,10 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.deps import get_analytics_service, get_settings
 from app.core.config import Settings
 from app.main import app
 from app.services.analysis import AnalyticsService
-from app.api.deps import get_analytics_service, get_settings
 
 
 @pytest.fixture
