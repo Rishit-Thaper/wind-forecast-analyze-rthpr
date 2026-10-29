@@ -1,9 +1,10 @@
+import json
 from datetime import datetime, time, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 UTC = timezone.utc
@@ -26,12 +27,25 @@ class Settings(BaseSettings):
         default_factory=lambda: Path(__file__).resolve().parents[2] / ".cache",
         alias="ELEXON_CACHE_DIR",
     )
-    cors_origins: List[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:80",
-        "http://localhost",
-    ]
+    cors_origins: Union[List[str], str] = Field(
+        default=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:80",
+            "http://localhost",
+        ],
+        alias="CORS_ORIGINS",
+    )
+
+    @field_validator("cors_origins")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                return json.loads(v)
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
 
     def decision_cutoff(self, delivery_start: datetime) -> datetime:
         """Working assumption: cutoff_hour_utc on the preceding calendar day."""
