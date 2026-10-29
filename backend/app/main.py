@@ -1,7 +1,7 @@
 """FastAPI application entry point."""
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
@@ -26,15 +26,6 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
-
-    # Vercel Path Normalizer: Vercel rewrite routes to /api/index.py while preserving
-    # the requested client path in the 'x-matched-path' header.
-    @app.middleware("http")
-    async def vercel_path_normalizer(request: Request, call_next):
-        matched_path = request.headers.get("x-matched-path")
-        if matched_path:
-            request.scope["path"] = matched_path.split("?")[0]
-        return await call_next(request)
 
     # CORS configuration
     is_wildcard = "*" in settings.cors_origins
