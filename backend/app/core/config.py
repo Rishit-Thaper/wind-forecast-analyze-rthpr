@@ -12,6 +12,14 @@ JANUARY_START = datetime(2026, 1, 1, tzinfo=UTC)
 FEBRUARY_START = datetime(2026, 2, 1, tzinfo=UTC)
 
 
+def _default_cache_dir() -> Path:
+    import os
+
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return Path("/tmp/.cache")
+    return Path(__file__).resolve().parents[2] / ".cache"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -24,7 +32,7 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = Field(default=21600, alias="ELEXON_CACHE_TTL_SECONDS")
     forecast_lookback_days: int = Field(default=31, alias="FORECAST_LOOKBACK_DAYS")
     cache_dir: Path = Field(
-        default_factory=lambda: Path(__file__).resolve().parents[2] / ".cache",
+        default_factory=_default_cache_dir,
         alias="ELEXON_CACHE_DIR",
     )
     cors_origins: Union[List[str], str] = Field(

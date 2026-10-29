@@ -23,7 +23,12 @@ class ElexonClient:
 
     def __init__(self, app_settings: Settings):
         self.settings = app_settings
-        self.settings.cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.settings.cache_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            fallback = Path("/tmp/.cache")
+            fallback.mkdir(parents=True, exist_ok=True)
+            self.settings.cache_dir = fallback
 
     @staticmethod
     def _iso(stamp: datetime) -> str:
