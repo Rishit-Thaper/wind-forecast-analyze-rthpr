@@ -1,10 +1,12 @@
 import React from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
-import { formatDateTitle } from '../../utils/formatters'
+import { formatDateTitle, formatShortDate } from '../../utils/formatters'
 import { MIN_DATE, MAX_DATE } from '../../constants/analytics'
 
 export interface DailyHeaderProps {
   date: string
+  decisionDate: string
+  cutoffTimeUtc: string
   matchedPeriods: number
   expectedPeriods: number
   prevIso: string
@@ -17,6 +19,8 @@ export interface DailyHeaderProps {
 
 export const DailyHeader: React.FC<DailyHeaderProps> = ({
   date,
+  decisionDate,
+  cutoffTimeUtc,
   matchedPeriods,
   expectedPeriods,
   prevIso,
@@ -40,7 +44,8 @@ export const DailyHeader: React.FC<DailyHeaderProps> = ({
           <span className="eyebrow">Daily Analysis</span>
           <h1>{formatDateTitle(date)}</h1>
           <p className="subtitle">
-            {matchedPeriods} of {expectedPeriods} delivery periods matched · All timestamps UTC
+            {matchedPeriods} of {expectedPeriods} delivery hours matched · Bought on{' '}
+            {formatShortDate(decisionDate)} before {cutoffTimeUtc} UTC · All timestamps UTC
           </p>
         </div>
 

@@ -8,8 +8,11 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 UTC = timezone.utc
-JANUARY_START = datetime(2026, 1, 1, tzinfo=UTC)
-FEBRUARY_START = datetime(2026, 2, 1, tzinfo=UTC)
+# Purchase decisions are made in January 2026, so delivery days run from 2 January to 1 February.
+DECISION_START = datetime(2026, 1, 1, tzinfo=UTC)
+DECISION_END = datetime(2026, 2, 1, tzinfo=UTC)
+DELIVERY_START = DECISION_START + timedelta(days=1)
+DELIVERY_END = DECISION_END + timedelta(days=1)
 
 
 def _default_cache_dir() -> Path:
@@ -25,9 +28,11 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
-    cutoff_hour_utc: int = Field(default=12, alias="DAY_AHEAD_CUTOFF_HOUR_UTC")
+    # EPEX GB day-ahead (hourly) auction gate closure, 09:20 UK time; UK time equals UTC in January.
+    cutoff_time_utc: time = Field(default=time(9, 20), alias="DAY_AHEAD_CUTOFF_UTC")
     timeout_seconds: float = Field(default=30.0, alias="ELEXON_TIMEOUT_SECONDS")
     cache_ttl_seconds: int = Field(default=21600, alias="ELEXON_CACHE_TTL_SECONDS")
     forecast_lookback_days: int = Field(default=31, alias="FORECAST_LOOKBACK_DAYS")
@@ -55,11 +60,15 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",") if i.strip()]
         return v
 
+    @property
+    def cutoff_label(self) -> str:
+        return f"{self.cutoff_time_utc:%H:%M} UTC"
+
     def decision_cutoff(self, delivery_start: datetime) -> datetime:
-        """Working assumption: cutoff_hour_utc on the preceding calendar day."""
+        """Latest usable forecast publication time: the cutoff on the calendar day before delivery."""
         delivery_utc = delivery_start.astimezone(UTC)
         previous_day = (delivery_utc - timedelta(days=1)).date()
-        return datetime.combine(previous_day, time(self.cutoff_hour_utc), tzinfo=UTC)
+        return datetime.combine(previous_day, self.cutoff_time_utc, tzinfo=UTC)
 
 
 @lru_cache

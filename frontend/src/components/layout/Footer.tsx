@@ -6,7 +6,7 @@ export const Footer: React.FC = () => {
       <div className="footer-content">
         <span>Wind Analytics · Official data sourced from Elexon BMRS WINDFOR and FUELHH streams</span>
         <span className="footer-note">
-          All timestamps normalized to UTC · Metrics calculated over matched pairs only
+          All timestamps normalized to UTC · Metrics calculated over matched hours only
         </span>
       </div>
     </footer>

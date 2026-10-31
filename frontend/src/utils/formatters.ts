@@ -34,3 +34,8 @@ export const formatUtcDateTime = (dateTimeStr: string | null): string => {
   if (!dateTimeStr) return '—'
   return dateTimeStr.replace('T', ' ').replace('Z', ' UTC')
 }
+
+export const formatSignedMw = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return '—'
+  return `${value > 0 ? '+' : ''}${formatMw(value)}`
+}

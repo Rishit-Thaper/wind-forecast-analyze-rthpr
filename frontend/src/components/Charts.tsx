@@ -9,7 +9,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { DailySummary, HalfHourPeriod } from '../types/analytics'
+import type { DailySummary, DeliveryHour } from '../types/analytics'
+import { formatShortDate } from '../utils/formatters'
 
 const formatMw = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return '—'
@@ -38,7 +39,9 @@ export const DailyMaeChart: React.FC<DailyMaeChartProps> = ({ data, onSelect, se
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
           <XAxis
             dataKey="date"
-            tickFormatter={(date: string) => date.slice(8)}
+            tickFormatter={(date: string) =>
+              date.endsWith('-01') ? formatShortDate(date) : String(Number(date.slice(8)))
+            }
             tick={{ fill: '#64748b', fontSize: 12 }}
             tickLine={{ stroke: '#e2e8f0' }}
             axisLine={{ stroke: '#e2e8f0' }}
@@ -70,7 +73,7 @@ export const DailyMaeChart: React.FC<DailyMaeChartProps> = ({ data, onSelect, se
                       <strong>{formatMw(item.mae_mw)}</strong>
                     </div>
                     <div className="tooltip-row">
-                      <span>Matched Periods:</span>
+                      <span>Matched Hours:</span>
                       <span>{item.matched_periods} / {item.expected_periods}</span>
                     </div>
                     <p className="tooltip-hint">{isSelected ? 'Currently selected' : 'Click point to inspect'}</p>
@@ -91,13 +94,13 @@ export const DailyMaeChart: React.FC<DailyMaeChartProps> = ({ data, onSelect, se
           />
         </LineChart>
       </ResponsiveContainer>
-      <p className="chart-hint">Click any day point on the line to jump to its half-hourly breakdown.</p>
+      <p className="chart-hint">Click any day point on the line to jump to its hourly breakdown.</p>
     </div>
   )
 }
 
 interface GenerationChartProps {
-  data: HalfHourPeriod[]
+  data: DeliveryHour[]
 }
 
 export const GenerationChart: React.FC<GenerationChartProps> = ({ data }) => {
@@ -113,7 +116,7 @@ export const GenerationChart: React.FC<GenerationChartProps> = ({ data }) => {
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
           <XAxis
             dataKey="time"
-            interval={3}
+            interval={1}
             tick={{ fill: '#64748b', fontSize: 12 }}
             tickLine={{ stroke: '#e2e8f0' }}
             axisLine={{ stroke: '#e2e8f0' }}
@@ -128,7 +131,7 @@ export const GenerationChart: React.FC<GenerationChartProps> = ({ data }) => {
           <Tooltip
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
-                const item = payload[0].payload as HalfHourPeriod & { time: string }
+                const item = payload[0].payload as DeliveryHour & { time: string }
                 return (
                   <div className="custom-tooltip">
                     <p className="tooltip-title">Delivery Time: {item.time} UTC</p>

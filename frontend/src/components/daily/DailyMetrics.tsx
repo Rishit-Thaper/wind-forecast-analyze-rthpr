@@ -31,7 +31,7 @@ export const DailyMetrics: React.FC<DailyMetricsProps> = ({ metrics }) => {
       <MetricCard
         label="Daily MAE"
         value={formatMw(metrics.mae_mw)}
-        detail={`${metrics.matched_periods} matched delivery periods`}
+        detail={`${metrics.matched_periods} matched delivery hours`}
       />
       <MetricCard
         label="Daily Forecast Bias"

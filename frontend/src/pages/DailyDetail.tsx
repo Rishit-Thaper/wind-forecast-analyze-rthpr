@@ -4,7 +4,7 @@ import {
   DailyMetrics,
   DailyChartPanel,
   DailyMissesList,
-  HourlyErrorDistribution,
+  DecisionContextPanel,
   DailyComparisonTable,
 } from '../components/daily'
 import { getAdjacentDates } from '../utils/date'
@@ -39,6 +39,8 @@ export const DailyDetail: React.FC<DailyDetailProps> = ({ data, onDate, onBack }
     <>
       <DailyHeader
         date={data.date}
+        decisionDate={data.decision_date}
+        cutoffTimeUtc={data.cutoff_time_utc}
         matchedPeriods={data.coverage.matched_periods}
         expectedPeriods={data.coverage.expected_periods}
         prevIso={prevIso}
@@ -55,7 +57,7 @@ export const DailyDetail: React.FC<DailyDetailProps> = ({ data, onDate, onBack }
 
       <section className="detail-grid">
         <DailyMissesList misses={data.largest_misses} />
-        <HourlyErrorDistribution breakdown={data.hourly_error_breakdown} />
+        <DecisionContextPanel data={data} />
       </section>
 
       <DailyComparisonTable

@@ -697,6 +697,55 @@ h2 {
   margin-top: 1px;
 }
 
+.hour-grid.wide {
+  grid-template-columns: repeat(8, 1fr);
+}
+
+/* Compact analysis tables */
+.panel-subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.mini-table {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-table th, .mini-table td {
+  padding: 9px 8px;
+  text-align: right;
+  white-space: nowrap;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.mini-table th:first-child, .mini-table td:first-child {
+  text-align: left;
+}
+
+.mini-table th {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mini-table td {
+  color: var(--color-text-secondary);
+}
+
+.mini-table tr.row-current td {
+  background-color: var(--color-info-bg);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
 /* Data Table */
 .table-panel {
   overflow: hidden;
@@ -781,6 +830,11 @@ h2 {
 .pill-negative {
   background-color: var(--color-negative-bg);
   color: var(--color-negative-text);
+}
+
+.pill-info {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
 }
 
 .pill-neutral {
@@ -974,6 +1028,10 @@ h2 {
   .hour-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .hour-grid.wide {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -1008,8 +1066,13 @@ h2 {
     justify-content: space-between;
   }
 
-  .hour-grid {
+  .hour-grid, .hour-grid.wide {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mini-table th, .mini-table td {
+    padding: 8px 4px;
+    white-space: normal;
   }
 
   .footer-content {

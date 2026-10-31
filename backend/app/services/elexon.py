@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 
-from app.core.config import FEBRUARY_START, JANUARY_START, Settings
+from app.core.config import DECISION_END, DECISION_START, DELIVERY_END, Settings
 from app.core.errors import ElexonError
 
 logger = logging.getLogger(__name__)
@@ -122,8 +122,9 @@ class ElexonClient:
         return records
 
     def load_january_records(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """Load WINDFOR forecasts and FUELHH wind actuals for January 2026."""
-        forecast_start = JANUARY_START - timedelta(days=self.settings.forecast_lookback_days)
-        forecasts = self._fetch("WINDFOR", forecast_start, FEBRUARY_START)
-        actuals = self._fetch("FUELHH", JANUARY_START, FEBRUARY_START + timedelta(days=2))
+        """Load WINDFOR forecasts usable for January 2026 decisions and FUELHH outturn for their delivery days."""
+        forecast_start = DECISION_START - timedelta(days=self.settings.forecast_lookback_days)
+        forecasts = self._fetch("WINDFOR", forecast_start, DECISION_END)
+        # Outturn for the final settlement period of a delivery day is published shortly after midnight.
+        actuals = self._fetch("FUELHH", DECISION_START, DELIVERY_END + timedelta(days=1))
         return forecasts, actuals

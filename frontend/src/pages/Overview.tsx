@@ -3,6 +3,9 @@ import {
   OverviewHeader,
   OverviewMetrics,
   OverviewChartPanel,
+  ForecastLevelPanel,
+  ForecastFreshnessPanel,
+  HourOfDayPanel,
   DataIntegritySection,
 } from '../components/overview'
 import type { OverviewProps } from '../types/ui'
@@ -14,11 +17,21 @@ export const Overview: React.FC<OverviewProps> = ({
   onSelectDate,
   onOpenDetail,
 }) => {
-  const { metrics, coverage, daily, cutoff_assumption } = data
+  const {
+    metrics,
+    coverage,
+    daily,
+    cutoff_time_utc,
+    cutoff_assumption,
+    error_by_hour,
+    error_by_forecast_level,
+    forecast_freshness,
+  } = data
 
   return (
     <>
       <OverviewHeader
+        cutoffTimeUtc={cutoff_time_utc}
         selectedDate={selectedDate}
         onSelectDate={onSelectDate}
         onOpenDetail={onOpenDetail}
@@ -32,6 +45,13 @@ export const Overview: React.FC<OverviewProps> = ({
         onSelectDate={onSelectDate}
         onOpenDetail={onOpenDetail}
       />
+
+      <section className="detail-grid">
+        <ForecastLevelPanel levels={error_by_forecast_level} />
+        <ForecastFreshnessPanel freshness={forecast_freshness} cutoffTimeUtc={cutoff_time_utc} />
+      </section>
+
+      <HourOfDayPanel hours={error_by_hour} />
 
       <DataIntegritySection
         coverage={coverage}
