@@ -2,14 +2,22 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from math import sqrt
+from statistics import quantiles
 from typing import Any, Iterable
 
-from app.core.config import FEBRUARY_START, JANUARY_START, Settings
+from app.core.config import DELIVERY_END, DELIVERY_START, Settings
 from app.services.elexon import ElexonClient
 
 UTC = timezone.utc
+HOUR = timedelta(hours=1)
+SETTLEMENT_PERIOD = timedelta(minutes=30)
+# Bands of the forecast value (lower inclusive, upper exclusive, MW): the forecast is what a trader sees at decision time.
+FORECAST_LEVEL_BANDS: tuple[tuple[float, float | None], ...] = ((0, 5000), (5000, 10000), (10000, 15000), (15000, None))
+
+# Delivery hour -> publication time -> forecast MW.
+ForecastIndex = dict[datetime, dict[datetime, float]]
 
 
 def parse_timestamp(value: Any) -> datetime | None:
@@ -36,30 +44,33 @@ def _format_timestamp(stamp: datetime | None) -> str | None:
     return stamp.isoformat().replace("+00:00", "Z") if stamp else None
 
 
-def build_comparisons(
+def index_forecasts(
     forecasts: Iterable[dict[str, Any]],
-    actuals: Iterable[dict[str, Any]],
-    settings: Settings,
-    period_start: datetime = JANUARY_START,
-    period_end: datetime = FEBRUARY_START,
-) -> list[dict[str, Any]]:
-    """Select latest forecast published by cutoff and match same UTC half-hour."""
-    selected_forecasts: dict[datetime, tuple[datetime, float, int]] = {}
-    for index, record in enumerate(forecasts):
+    period_start: datetime = DELIVERY_START,
+    period_end: datetime = DELIVERY_END,
+) -> ForecastIndex:
+    """Group WINDFOR values by delivery hour and publication; a repeated pair keeps the latter raw record."""
+    index: ForecastIndex = defaultdict(dict)
+    for record in forecasts:
         start = parse_timestamp(record.get("startTime"))
         published = parse_timestamp(record.get("publishTime"))
         generation = _generation(record)
-        if not start or not published or generation is None or not period_start <= start < period_end:
-            continue
-        if published > settings.decision_cutoff(start):
-            continue
-        candidate = (published, generation, index)
-        # Later publication wins; an equal publication chooses the latter raw record deterministically.
-        if start not in selected_forecasts or candidate[:1] >= selected_forecasts[start][:1]:
-            selected_forecasts[start] = candidate
+        if start and published and generation is not None and period_start <= start < period_end:
+            index[start][published] = generation
+    return index
 
-    selected_actuals: dict[datetime, tuple[datetime, float, int]] = {}
-    for index, record in enumerate(actuals):
+
+def hourly_actuals(
+    actuals: Iterable[dict[str, Any]],
+    period_start: datetime = DELIVERY_START,
+    period_end: datetime = DELIVERY_END,
+) -> dict[datetime, float]:
+    """Average FUELHH wind settlement periods up to WINDFOR's hourly resolution.
+
+    The latest publication of each half-hour wins, and an hour missing either half-hour has no actual.
+    """
+    half_hours: dict[datetime, tuple[datetime, float]] = {}
+    for record in actuals:
         if str(record.get("fuelType", "")).upper() != "WIND":
             continue
         start = parse_timestamp(record.get("startTime"))
@@ -67,17 +78,33 @@ def build_comparisons(
         if not start or generation is None or not period_start <= start < period_end:
             continue
         published = parse_timestamp(record.get("publishTime")) or datetime.min.replace(tzinfo=UTC)
-        candidate = (published, generation, index)
-        if start not in selected_actuals or candidate[:1] >= selected_actuals[start][:1]:
-            selected_actuals[start] = candidate
+        if start not in half_hours or published >= half_hours[start][0]:
+            half_hours[start] = (published, generation)
 
+    hourly: dict[datetime, float] = {}
+    for start, (_, first_half) in half_hours.items():
+        second_half = half_hours.get(start + SETTLEMENT_PERIOD)
+        if start.minute == 0 and second_half is not None:
+            hourly[start] = (first_half + second_half[1]) / 2
+    return hourly
+
+
+def pair_forecasts(
+    index: ForecastIndex,
+    actuals_by_hour: dict[datetime, float],
+    settings: Settings,
+    period_start: datetime = DELIVERY_START,
+    period_end: datetime = DELIVERY_END,
+) -> list[dict[str, Any]]:
+    """Pair each delivery hour's latest forecast published by the decision cutoff with its outturn."""
     rows: list[dict[str, Any]] = []
     current = period_start
     while current < period_end:
-        forecast = selected_forecasts.get(current)
-        actual = selected_actuals.get(current)
-        forecast_value = forecast[1] if forecast else None
-        actual_value = actual[1] if actual else None
+        cutoff = settings.decision_cutoff(current)
+        eligible = [published for published in index.get(current, {}) if published <= cutoff]
+        published = max(eligible) if eligible else None
+        forecast_value = index[current][published] if published else None
+        actual_value = actuals_by_hour.get(current)
         error = forecast_value - actual_value if forecast_value is not None and actual_value is not None else None
         rows.append({
             "start_time": _format_timestamp(current),
@@ -85,10 +112,36 @@ def build_comparisons(
             "actual_mw": actual_value,
             "error_mw": error,
             "absolute_error_mw": abs(error) if error is not None else None,
-            "publication_time": _format_timestamp(forecast[0]) if forecast else None,
+            "publication_time": _format_timestamp(published),
+            "lead_time_hours": (current - published) / HOUR if published else None,
         })
-        current += timedelta(minutes=30)
+        current += HOUR
     return rows
+
+
+def build_comparisons(
+    forecasts: Iterable[dict[str, Any]],
+    actuals: Iterable[dict[str, Any]],
+    settings: Settings,
+    period_start: datetime = DELIVERY_START,
+    period_end: datetime = DELIVERY_END,
+) -> list[dict[str, Any]]:
+    """Select latest forecast published by cutoff and match it to the same UTC hour's outturn."""
+    return pair_forecasts(
+        index_forecasts(forecasts, period_start, period_end),
+        hourly_actuals(actuals, period_start, period_end),
+        settings,
+        period_start,
+        period_end,
+    )
+
+
+def _error_percentiles(errors: list[float]) -> tuple[float, float, float]:
+    """P10, P50 and P90 of signed error, interpolated between observations."""
+    if len(errors) == 1:
+        return errors[0], errors[0], errors[0]
+    deciles = quantiles(errors, n=10, method="inclusive")
+    return deciles[0], deciles[4], deciles[8]
 
 
 def calculate_metrics(rows: Iterable[dict[str, Any]]) -> dict[str, float | int | None]:
@@ -96,12 +149,25 @@ def calculate_metrics(rows: Iterable[dict[str, Any]]) -> dict[str, float | int |
     errors = [float(row["error_mw"]) for row in matched]
     actual_total = sum(float(row["actual_mw"]) for row in matched)
     if not errors:
-        return {"mae_mw": None, "rmse_mw": None, "bias_mw": None, "wape_percent": None, "matched_periods": 0}
+        return {
+            "mae_mw": None,
+            "rmse_mw": None,
+            "bias_mw": None,
+            "wape_percent": None,
+            "p10_error_mw": None,
+            "p50_error_mw": None,
+            "p90_error_mw": None,
+            "matched_periods": 0,
+        }
+    p10, p50, p90 = _error_percentiles(errors)
     return {
         "mae_mw": sum(abs(error) for error in errors) / len(errors),
         "rmse_mw": sqrt(sum(error ** 2 for error in errors) / len(errors)),
         "bias_mw": sum(errors) / len(errors),
         "wape_percent": (sum(abs(error) for error in errors) / actual_total * 100) if actual_total else None,
+        "p10_error_mw": p10,
+        "p50_error_mw": p50,
+        "p90_error_mw": p90,
         "matched_periods": len(errors),
     }
 
@@ -126,15 +192,52 @@ def daily_summaries(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def hourly_breakdown(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    buckets: dict[int, list[float]] = defaultdict(list)
+def error_by_hour(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Accuracy for each hour of the delivery day across the whole window."""
+    by_hour: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        stamp = parse_timestamp(row.get("start_time"))
-        if stamp and row.get("absolute_error_mw") is not None:
-            buckets[stamp.hour].append(float(row["absolute_error_mw"]))
+        by_hour[row["start_time"][11:16]].append(row)
+    return [{"hour": hour, **calculate_metrics(hour_rows)} for hour, hour_rows in sorted(by_hour.items())]
+
+
+def error_by_forecast_level(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Accuracy grouped by how much wind was forecast."""
+    rows = [row for row in rows if row["forecast_mw"] is not None]
     return [
-        {"hour": f"{hour:02d}:00", "average_absolute_error_mw": sum(values) / len(values), "matched_periods": len(values)}
-        for hour, values in sorted(buckets.items())
+        {
+            "lower_mw": lower,
+            "upper_mw": upper,
+            **calculate_metrics(
+                row for row in rows if row["forecast_mw"] >= lower and (upper is None or row["forecast_mw"] < upper)
+            ),
+        }
+        for lower, upper in FORECAST_LEVEL_BANDS
+    ]
+
+
+def regular_publication_times(index: ForecastIndex) -> list[time]:
+    """Times of day at which WINDFOR is routinely published (on at least half of the days observed)."""
+    days_by_time: dict[time, set[date]] = defaultdict(set)
+    for publications in index.values():
+        for published in publications:
+            days_by_time[published.time()].add(published.date())
+    observed_days = len(set().union(*days_by_time.values())) if days_by_time else 0
+    return sorted(stamp for stamp, days in days_by_time.items() if len(days) * 2 >= observed_days)
+
+
+def forecast_freshness(
+    index: ForecastIndex,
+    actuals_by_hour: dict[datetime, float],
+    settings: Settings,
+) -> list[dict[str, Any]]:
+    """Accuracy had decisions used the latest forecast as of each routine publication time on the day before."""
+    return [
+        {
+            "as_of_utc": f"{as_of:%H:%M}",
+            "before_cutoff": as_of <= settings.cutoff_time_utc,
+            **calculate_metrics(pair_forecasts(index, actuals_by_hour, settings.model_copy(update={"cutoff_time_utc": as_of}))),
+        }
+        for as_of in regular_publication_times(index)
     ]
 
 
@@ -145,24 +248,40 @@ class AnalyticsService:
         self.client = client
         self.settings = settings
 
-    def get_comparison_rows(self) -> list[dict[str, Any]]:
+    def _load(self) -> tuple[ForecastIndex, dict[datetime, float]]:
         forecasts, actuals = self.client.load_january_records()
-        return build_comparisons(forecasts, actuals, self.settings)
+        return index_forecasts(forecasts), hourly_actuals(actuals)
+
+    def get_comparison_rows(self) -> list[dict[str, Any]]:
+        index, actuals = self._load()
+        return pair_forecasts(index, actuals, self.settings)
 
     def cutoff_assumption(self) -> str:
         return (
-            f"Working assumption: {self.settings.cutoff_hour_utc:02d}:00 UTC on the previous calendar day; "
-            "configurable via DAY_AHEAD_CUTOFF_HOUR_UTC."
+            f"Forecasts must be published by {self.settings.cutoff_label} on the day before delivery. "
+            "The default, 09:20, is the EPEX GB day-ahead auction gate closure (UK time equals UTC in January); "
+            "configurable via DAY_AHEAD_CUTOFF_UTC."
         )
 
-    def get_overview(self) -> dict[str, Any]:
-        rows = self.get_comparison_rows()
+    def _cutoff_fields(self) -> dict[str, str]:
         return {
-            "period": "2026-01-01 to 2026-01-31",
+            "cutoff_time_utc": f"{self.settings.cutoff_time_utc:%H:%M}",
             "cutoff_assumption": self.cutoff_assumption(),
+        }
+
+    def get_overview(self) -> dict[str, Any]:
+        index, actuals = self._load()
+        rows = pair_forecasts(index, actuals, self.settings)
+        last_delivery_day = DELIVERY_END - timedelta(days=1)
+        return {
+            "period": f"{DELIVERY_START:%Y-%m-%d} to {last_delivery_day:%Y-%m-%d}",
+            **self._cutoff_fields(),
             "metrics": calculate_metrics(rows),
             "coverage": coverage(rows),
             "daily": daily_summaries(rows),
+            "error_by_hour": error_by_hour(rows),
+            "error_by_forecast_level": error_by_forecast_level(rows),
+            "forecast_freshness": forecast_freshness(index, actuals, self.settings),
         }
 
     def get_daily(self, selected_date: date) -> dict[str, Any]:
@@ -176,10 +295,11 @@ class AnalyticsService:
 
         return {
             "date": date_iso,
-            "cutoff_assumption": self.cutoff_assumption(),
+            "decision_date": (selected_date - timedelta(days=1)).isoformat(),
+            **self._cutoff_fields(),
             "metrics": calculate_metrics(day_rows),
             "coverage": coverage(day_rows),
             "periods": day_rows,
             "largest_misses": misses,
-            "hourly_error_breakdown": hourly_breakdown(day_rows),
+            "forecast_publications": sorted({row["publication_time"] for row in day_rows if row["publication_time"]}),
         }

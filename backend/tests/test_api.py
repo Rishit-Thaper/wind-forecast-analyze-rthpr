@@ -18,7 +18,11 @@ def test_overview_endpoint(client: TestClient):
     assert "metrics" in data
     assert "coverage" in data
     assert "daily" in data
-    assert data["period"] == "2026-01-01 to 2026-01-31"
+    assert data["period"] == "2026-01-02 to 2026-02-01"
+    assert data["cutoff_time_utc"] == "09:20"
+    assert len(data["error_by_hour"]) == 24
+    assert len(data["error_by_forecast_level"]) == 4
+    assert data["forecast_freshness"][0]["as_of_utc"] == "07:30"
 
 
 def test_daily_endpoint_valid_date(client: TestClient):
@@ -29,13 +33,22 @@ def test_daily_endpoint_valid_date(client: TestClient):
     assert "metrics" in data
     assert "periods" in data
     assert "largest_misses" in data
-    assert "hourly_error_breakdown" in data
+    assert data["decision_date"] == "2026-01-14"
+    assert data["forecast_publications"] == ["2026-01-14T07:30:00Z"]
+    assert len(data["periods"]) == 24
+    assert data["periods"][0]["actual_mw"] == 4950.0
+    assert data["metrics"]["matched_periods"] == 2
+
+
+def test_daily_endpoint_accepts_last_delivery_day(client: TestClient):
+    assert client.get("/api/daily?date=2026-02-01").status_code == 200
 
 
 def test_daily_endpoint_invalid_date(client: TestClient):
-    response = client.get("/api/daily?date=2025-12-31")
+    # 1 January was decided on 31 December, outside the January decision window.
+    response = client.get("/api/daily?date=2026-01-01")
     assert response.status_code == 422
-    assert "date must be between 2026-01-01 and 2026-01-31" in response.json()["detail"]
+    assert "date must be between 2026-01-02 and 2026-02-01" in response.json()["detail"]
 
 
 def test_daily_endpoint_invalid_date_format(client: TestClient):

@@ -5,7 +5,12 @@ from app.services.analysis import (
     calculate_metrics,
     coverage,
     daily_summaries,
-    hourly_breakdown,
+    error_by_forecast_level,
+    error_by_hour,
+    forecast_freshness,
+    hourly_actuals,
+    index_forecasts,
+    pair_forecasts,
     parse_timestamp,
 )
 
@@ -15,6 +20,11 @@ __all__ = [
     "calculate_metrics",
     "coverage",
     "daily_summaries",
-    "hourly_breakdown",
+    "error_by_forecast_level",
+    "error_by_hour",
+    "forecast_freshness",
+    "hourly_actuals",
+    "index_forecasts",
+    "pair_forecasts",
     "parse_timestamp",
 ]

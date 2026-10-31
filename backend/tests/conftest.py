@@ -1,4 +1,6 @@
 """Pytest fixtures for backend tests."""
+from datetime import time
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -11,7 +13,7 @@ from app.services.analysis import AnalyticsService
 @pytest.fixture
 def test_settings() -> Settings:
     return Settings(
-        cutoff_hour_utc=12,
+        cutoff_time_utc=time(9, 20),
         timeout_seconds=5.0,
         cache_ttl_seconds=3600,
     )
@@ -23,12 +25,14 @@ def mock_analytics_service(test_settings: Settings) -> AnalyticsService:
         def load_january_records(self):
             # Return sample records for testing
             forecasts = [
-                {"startTime": "2026-01-15T00:00:00Z", "publishTime": "2026-01-14T11:00:00Z", "generation": 5000.0},
-                {"startTime": "2026-01-15T00:30:00Z", "publishTime": "2026-01-14T11:00:00Z", "generation": 5200.0},
+                {"startTime": "2026-01-15T00:00:00Z", "publishTime": "2026-01-14T07:30:00Z", "generation": 5000.0},
+                {"startTime": "2026-01-15T01:00:00Z", "publishTime": "2026-01-14T07:30:00Z", "generation": 5200.0},
             ]
             actuals = [
                 {"startTime": "2026-01-15T00:00:00Z", "fuelType": "WIND", "generation": 4800.0, "publishTime": "2026-01-15T00:35:00Z"},
                 {"startTime": "2026-01-15T00:30:00Z", "fuelType": "WIND", "generation": 5100.0, "publishTime": "2026-01-15T01:05:00Z"},
+                {"startTime": "2026-01-15T01:00:00Z", "fuelType": "WIND", "generation": 5000.0, "publishTime": "2026-01-15T01:35:00Z"},
+                {"startTime": "2026-01-15T01:30:00Z", "fuelType": "WIND", "generation": 5100.0, "publishTime": "2026-01-15T02:05:00Z"},
             ]
             return forecasts, actuals
 
