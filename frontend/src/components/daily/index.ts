@@ -10,8 +10,8 @@ export type { DailyChartPanelProps } from './DailyChartPanel'
 export { DailyMissesList } from './DailyMissesList'
 export type { DailyMissesListProps } from './DailyMissesList'
 
-export { HourlyErrorDistribution } from './HourlyErrorDistribution'
-export type { HourlyErrorDistributionProps } from './HourlyErrorDistribution'
+export { DecisionContextPanel } from './DecisionContextPanel'
+export type { DecisionContextPanelProps } from './DecisionContextPanel'
 
 export { DailyComparisonTable } from './DailyComparisonTable'
 export type { DailyComparisonTableProps } from './DailyComparisonTable'

@@ -15,11 +15,11 @@ describe('API client', () => {
   it('fetches overview data from /api/overview', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ period: '2026-01-01 to 2026-01-31' }),
+      json: async () => ({ period: '2026-01-02 to 2026-02-01' }),
     })
     const res = await getOverview()
     expect(fetch).toHaveBeenCalledWith('/api/overview')
-    expect(res.period).toBe('2026-01-01 to 2026-01-31')
+    expect(res.period).toBe('2026-01-02 to 2026-02-01')
   })
 
   it('throws informative error when response is not ok', async () => {

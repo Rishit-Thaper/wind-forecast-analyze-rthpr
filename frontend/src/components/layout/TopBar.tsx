@@ -65,7 +65,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <RefreshCw size={14} className={isLoading ? 'spinning' : ''} />
           <span className="refresh-label">Refresh</span>
         </button>
-        <span className="period-badge">January 2026</span>
+        <span className="period-badge">Decisions: Jan 2026</span>
       </div>
     </header>
   )

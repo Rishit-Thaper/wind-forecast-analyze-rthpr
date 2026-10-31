@@ -1,10 +1,10 @@
 import React from 'react'
 import { formatMw, formatUtcDateTime } from '../../utils/formatters'
-import type { HalfHourPeriod, Coverage } from '../../types/analytics'
+import type { DeliveryHour, Coverage } from '../../types/analytics'
 import type { SortConfig, SortField } from '../../types/ui'
 
 export interface DailyComparisonTableProps {
-  rows: HalfHourPeriod[]
+  rows: DeliveryHour[]
   coverage: Coverage
   sort: SortConfig
   onSortChange: (field: SortField) => void
@@ -27,9 +27,10 @@ export const DailyComparisonTable: React.FC<DailyComparisonTableProps> = ({
     <section className="panel table-panel">
       <div className="panel-header">
         <div>
-          <h2>Half-Hourly Comparison Table</h2>
+          <h2>Hourly Comparison Table</h2>
           <p>
-            Full breakdown of all 48 settlement periods. Missing values are excluded from metrics.
+            All {rows.length} delivery hours. WINDFOR is hourly, so actual outturn is the mean of each
+            hour's two settlement periods. Missing values are excluded from metrics.
           </p>
         </div>
         <span className="coverage-badge">
@@ -87,6 +88,7 @@ export const DailyComparisonTable: React.FC<DailyComparisonTableProps> = ({
                 </button>
               </th>
               <th>Forecast Published</th>
+              <th>Lead Time</th>
             </tr>
           </thead>
           <tbody>
@@ -116,6 +118,9 @@ export const DailyComparisonTable: React.FC<DailyComparisonTableProps> = ({
                   <td>{formatMw(row.absolute_error_mw)}</td>
                   <td className="text-muted font-mono">
                     {formatUtcDateTime(row.publication_time)}
+                  </td>
+                  <td className="text-muted">
+                    {row.lead_time_hours === null ? '—' : `${row.lead_time_hours} h`}
                   </td>
                 </tr>
               )

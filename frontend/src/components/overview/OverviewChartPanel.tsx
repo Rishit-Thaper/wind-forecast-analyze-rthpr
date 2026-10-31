@@ -24,7 +24,7 @@ export const OverviewChartPanel: React.FC<OverviewChartPanelProps> = ({
       <div className="panel-header">
         <div>
           <h2>Daily Forecast Accuracy</h2>
-          <p>Mean absolute error for each day of the delivery month.</p>
+          <p>Mean absolute error for each delivery day.</p>
         </div>
         <button type="button" className="button secondary" onClick={onOpenDetail}>
           Open {selectedDateFormatted} details →
@@ -34,7 +34,7 @@ export const OverviewChartPanel: React.FC<OverviewChartPanelProps> = ({
       {hasMatchedData ? (
         <DailyMaeChart data={daily} onSelect={onSelectDate} selectedDate={selectedDate} />
       ) : (
-        <div className="empty-state">No matched periods are available to chart.</div>
+        <div className="empty-state">No matched hours are available to chart.</div>
       )}
     </section>
   )

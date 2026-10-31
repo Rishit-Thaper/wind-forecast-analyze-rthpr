@@ -1,9 +1,9 @@
 import React from 'react'
 import { formatMw } from '../../utils/formatters'
-import type { HalfHourPeriod } from '../../types/analytics'
+import type { DeliveryHour } from '../../types/analytics'
 
 export interface DailyMissesListProps {
-  misses: HalfHourPeriod[]
+  misses: DeliveryHour[]
 }
 
 export const DailyMissesList: React.FC<DailyMissesListProps> = ({ misses }) => {

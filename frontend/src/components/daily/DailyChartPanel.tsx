@@ -1,9 +1,9 @@
 import React from 'react'
 import { GenerationChart } from '../Charts'
-import type { HalfHourPeriod } from '../../types/analytics'
+import type { DeliveryHour } from '../../types/analytics'
 
 export interface DailyChartPanelProps {
-  periods: HalfHourPeriod[]
+  periods: DeliveryHour[]
 }
 
 export const DailyChartPanel: React.FC<DailyChartPanelProps> = ({ periods }) => {
@@ -12,7 +12,10 @@ export const DailyChartPanel: React.FC<DailyChartPanelProps> = ({ periods }) => 
       <div className="panel-header">
         <div>
           <h2>Forecast vs Actual Generation</h2>
-          <p>Half-hourly national wind generation outturn compared to day-ahead forecasts.</p>
+          <p>
+            Hourly national wind outturn (mean of two settlement periods) against the forecast
+            available at gate closure.
+          </p>
         </div>
         <span className="utc-badge">UTC</span>
       </div>
